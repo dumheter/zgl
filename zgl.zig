@@ -1,5 +1,5 @@
 const std = @import("std");
-const binding = @import("binding.zig");
+pub const binding = @import("binding.zig");
 
 comptime {
     std.testing.refAllDecls(@This());
@@ -276,7 +276,7 @@ pub fn readPixels(
     height: usize,
     format: PixelFormat,
     pixel_type: PixelType,
-    data: *anyopaque,
+    data: ?[*]u8,
 ) void {
     binding.readPixels(
         @as(types.Int, @intCast(x)),
@@ -682,23 +682,6 @@ pub fn namedBufferStorage(buf: types.Buffer, comptime T: type, count: usize, ite
     checkError();
 }
 
-pub const BufferMapTarget = enum(types.Enum) {
-    array_buffer = binding.ARRAY_BUFFER,
-    atomic_counter_buffer = binding.ATOMIC_COUNTER_BUFFER,
-    copy_read_buffer = binding.COPY_READ_BUFFER,
-    copy_write_buffer = binding.COPY_WRITE_BUFFER,
-    dispatch_indirect_buffer = binding.DISPATCH_INDIRECT_BUFFER,
-    draw_indirect_buffer = binding.DRAW_INDIRECT_BUFFER,
-    element_array_buffer = binding.ELEMENT_ARRAY_BUFFER,
-    pixel_pack_buffer = binding.PIXEL_PACK_BUFFER,
-    pixel_unpack_buffer = binding.PIXEL_UNPACK_BUFFER,
-    query_buffer = binding.QUERY_BUFFER,
-    shader_storage_buffer = binding.SHADER_STORAGE_BUFFER,
-    texture_buffer = binding.TEXTURE_BUFFER,
-    transform_feedback_buffer = binding.TRANSFORM_FEEDBACK_BUFFER,
-    uniform_buffer = binding.UNIFORM_BUFFER,
-};
-
 pub const BufferMapAccess = enum(types.Enum) {
     read_only = binding.READ_ONLY,
     write_only = binding.WRITE_ONLY,
@@ -706,7 +689,7 @@ pub const BufferMapAccess = enum(types.Enum) {
 };
 
 pub fn mapBuffer(
-    target: BufferMapTarget,
+    target: BufferTarget,
     comptime T: type,
     access: BufferMapAccess,
 ) [*]align(1) T {
@@ -719,7 +702,7 @@ pub fn mapBuffer(
     return @as([*]align(1) T, @ptrCast(ptr));
 }
 
-pub fn unmapBuffer(target: BufferMapTarget) bool {
+pub fn unmapBuffer(target: BufferTarget) bool {
     const ok = binding.unmapBuffer(@intFromEnum(target));
     checkError();
     return ok == binding.TRUE;
@@ -1426,7 +1409,7 @@ pub const DepthFunc = enum(types.Enum) {
     less_or_equal = binding.LEQUAL,
     greater = binding.GREATER,
     not_equal = binding.NOTEQUAL,
-    greator_or_equal = binding.GEQUAL,
+    greater_or_equal = binding.GEQUAL,
     always = binding.ALWAYS,
 };
 
@@ -1457,7 +1440,7 @@ pub const StencilFunc = enum(types.Enum) {
     less_or_equal = binding.LEQUAL,
     greater = binding.GREATER,
     not_equal = binding.NOTEQUAL,
-    greator_or_equal = binding.GEQUAL,
+    greater_or_equal = binding.GEQUAL,
     always = binding.ALWAYS,
 };
 
@@ -1778,6 +1761,23 @@ pub const TextureInternalFormat = enum(types.Enum) {
     depth_component16 = binding.DEPTH_COMPONENT16,
 };
 
+pub fn texStorage2D(
+    target: TextureTarget,
+    levels: usize,
+    internalformat: TextureInternalFormat,
+    width: usize,
+    height: usize,
+) void {
+    binding.texStorage2D(
+        @intFromEnum(target),
+        @as(types.SizeI, @intCast(levels)),
+        @intFromEnum(internalformat),
+        @as(types.SizeI, @intCast(width)),
+        @as(types.SizeI, @intCast(height)),
+    );
+    checkError();
+}
+
 pub fn textureStorage2D(
     texture: types.Texture,
     levels: usize,
@@ -1792,6 +1792,11 @@ pub fn textureStorage2D(
         @as(types.SizeI, @intCast(width)),
         @as(types.SizeI, @intCast(height)),
     );
+    checkError();
+}
+
+pub fn texStorage3D(target: TextureTarget, levels: usize, internalformat: TextureInternalFormat, width: usize, height: usize, depth: usize) void {
+    binding.texStorage3D(@intFromEnum(target), @as(types.SizeI, @intCast(levels)), @intFromEnum(internalformat), @as(types.SizeI, @intCast(width)), @as(types.SizeI, @intCast(height)), @as(types.SizeI, @intCast(depth)));
     checkError();
 }
 
@@ -1883,7 +1888,7 @@ pub fn textureImage2D(
 }
 
 pub fn texSubImage2D(
-    textureTarget: TextureTarget,
+    texture_target: TextureTarget,
     level: usize,
     xoffset: usize,
     yoffset: usize,
@@ -1894,7 +1899,7 @@ pub fn texSubImage2D(
     data: ?[*]const u8,
 ) void {
     binding.texSubImage2D(
-        @intFromEnum(textureTarget),
+        @intFromEnum(texture_target),
         @as(types.Int, @intCast(level)),
         @as(types.Int, @intCast(xoffset)),
         @as(types.Int, @intCast(yoffset)),
@@ -1988,7 +1993,7 @@ pub fn textureImage3D(
 }
 
 pub fn texSubImage3D(
-    textureTarget: TextureTarget,
+    texture_target: TextureTarget,
     level: usize,
     xoffset: usize,
     yoffset: usize,
@@ -2001,7 +2006,7 @@ pub fn texSubImage3D(
     data: ?[*]const u8,
 ) void {
     binding.texSubImage3D(
-        @intFromEnum(textureTarget),
+        @intFromEnum(texture_target),
         @as(types.Int, @intCast(level)),
         @as(types.Int, @intCast(xoffset)),
         @as(types.Int, @intCast(yoffset)),
@@ -2017,14 +2022,14 @@ pub fn texSubImage3D(
 }
 
 pub fn getTexImage(
-    textureTarget: TextureTarget,
+    texture_target: TextureTarget,
     level: usize,
     pixel_format: PixelFormat,
     pixel_type: PixelType,
     data: [*]u8,
 ) void {
     binding.getTexImage(
-        @intFromEnum(textureTarget),
+        @intFromEnum(texture_target),
         @as(types.Int, @intCast(level)),
         @intFromEnum(pixel_format),
         @intFromEnum(pixel_type),
@@ -2232,6 +2237,10 @@ pub const FramebufferAttachment = enum(types.Enum) {
     stencil = binding.STENCIL_ATTACHMENT,
     depth_stencil = binding.DEPTH_STENCIL_ATTACHMENT,
     max_color = binding.MAX_COLOR_ATTACHMENTS,
+    /// Could be used for default framebuffer.
+    default_color = binding.COLOR,
+    default_depth = binding.DEPTH,
+    default_stencil = binding.STENCIL,
 };
 
 pub fn framebufferTexture(buffer: types.Framebuffer, target: FramebufferTarget, attachment: FramebufferAttachment, texture: types.Texture, level: i32) void {
@@ -2319,9 +2328,52 @@ pub fn invalidateTexImage(texture: types.Texture, level: types.Int) void {
     checkError();
 }
 
+pub fn invalidateBufferSubData(buffer: types.Buffer, comptime T: type, offset: usize, count: usize) void {
+    binding.invalidateBufferSubData(
+        @intFromEnum(buffer),
+        @as(binding.GLintptr, @intCast(offset)),
+        cs2gl(@sizeOf(T) * count),
+    );
+    checkError();
+}
+
+pub fn invalidateBufferData(buffer: types.Buffer) void {
+    binding.invalidateBufferData(@intFromEnum(buffer));
+    checkError();
+}
+
 pub fn invalidateFramebuffer(target: FramebufferTarget, attachments: []const FramebufferAttachment) void {
     binding.invalidateFramebuffer(@intFromEnum(target), cs2gl(attachments.len), @as([*]const types.Enum, @ptrCast(attachments.ptr)));
     checkError();
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// Syncing
+pub fn fenceSync() types.Sync {
+    const sync = binding.fenceSync(binding.SYNC_GPU_COMMANDS_COMPLETE, 0);
+    checkError();
+    return sync;
+}
+
+pub fn deleteSync(sync: types.Sync) void {
+    binding.deleteSync(sync);
+    checkError();
+}
+
+pub fn clientWaitSync(
+    sync: types.Sync,
+    force_flush: bool,
+    timeout: usize,
+) enum { already_signaled, timeout_expired, condition_satisfied, wait_failed } {
+    const result = binding.clientWaitSync(sync, binding.SYNC_FLUSH_COMMANDS_BIT * @intFromBool(force_flush), @as(types.UInt64, timeout));
+    checkError();
+    return switch (result) {
+        binding.ALREADY_SIGNALED => .already_signaled,
+        binding.TIMEOUT_EXPIRED => .timeout_expired,
+        binding.CONDITION_SATISFIED => .condition_satisfied,
+        binding.WAIT_FAILED => .wait_failed,
+        else => unreachable,
+    };
 }
 
 ///////////////////////////////////////////////////////////////////////////////
